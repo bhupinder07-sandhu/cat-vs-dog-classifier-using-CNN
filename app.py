@@ -1,79 +1,39 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
 
-# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="Cat vs Dog Classifier",
-    page_icon="🐱",
+    page_icon="🐶",
     layout="wide"
 )
 
-# ---------------- CSS ----------------
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    color: white;
-}
+st.title("🐱 Cat vs Dog Classifier")
 
-.main-title {
-    text-align: center;
-    font-size: 55px;
-    font-weight: bold;
-    color: white;
-}
+st.success("APP STARTED")
 
-.subtitle {
-    text-align: center;
-    font-size: 22px;
-    color: #cbd5e1;
-    margin-bottom: 30px;
-}
+try:
+    from tensorflow.keras.models import load_model
+    st.success("TensorFlow Imported Successfully")
+except Exception as e:
+    st.error(f"TensorFlow Import Error: {e}")
+    st.stop()
 
-.result-box {
-    padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-    font-size: 30px;
-    font-weight: bold;
-    background-color: #1e293b;
-    color: white;
-    margin-top: 20px;
-}
-
-.footer {
-    text-align: center;
-    color: #94a3b8;
-    margin-top: 40px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- MODEL ----------------
 @st.cache_resource
 def load_cnn_model():
-    return load_model("cats_dogs_model.keras")
+    st.warning("Loading CNN Model...")
+    model = load_model("cats_dogs_model.keras")
+    st.success("Model Loaded Successfully")
+    return model
 
-with st.spinner("Loading CNN Model... Please wait ⏳"):
+try:
     model = load_cnn_model()
+except Exception as e:
+    st.error(f"Model Loading Error: {e}")
+    st.stop()
 
-# ---------------- HEADER ----------------
-st.markdown(
-    '<p class="main-title">🐱 Cat vs Dog Classifier 🐶</p>',
-    unsafe_allow_html=True
-)
+st.success("APP READY")
 
-st.markdown(
-    '<p class="subtitle">Deep Learning Image Classification using CNN</p>',
-    unsafe_allow_html=True
-)
-
-st.divider()
-
-# ---------------- FILE UPLOAD ----------------
 uploaded_file = st.file_uploader(
     "Upload Cat or Dog Image",
     type=["jpg", "jpeg", "png"]
@@ -83,63 +43,32 @@ if uploaded_file is not None:
 
     image = Image.open(uploaded_file).convert("RGB")
 
-    col1, col2 = st.columns([1, 1])
+    st.image(
+        image,
+        caption="Uploaded Image",
+        width=350
+    )
 
-    with col1:
-        st.image(image, caption="Uploaded Image", use_container_width=True)
+    if st.button("Predict"):
 
-    with col2:
+        img = image.resize((200, 200))
 
-        if st.button("🔍 Predict", use_container_width=True):
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
 
-            img = image.resize((200, 200))
+        prediction = model.predict(img_array, verbose=0)
 
-            img_array = img_to_array(img)
-            img_array = img_array / 255.0
-            img_array = np.expand_dims(img_array, axis=0)
+        score = prediction[0][0]
 
-            prediction = model.predict(img_array, verbose=0)[0][0]
+        if score > 0.5:
+            label = "DOG 🐶"
+            confidence = score * 100
+        else:
+            label = "CAT 🐱"
+            confidence = (1 - score) * 100
 
-            # Change if labels are reversed
-            if prediction > 0.5:
-                label = "🐶 DOG"
-                confidence = prediction * 100
-            else:
-                label = "🐱 CAT"
-                confidence = (1 - prediction) * 100
+        st.success(f"Prediction: {label}")
+        st.info(f"Confidence: {confidence:.2f}%")
 
-            st.markdown(
-                f"""
-                <div class="result-box">
-                Prediction: {label}<br>
-                Confidence: {confidence:.2f}%
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-st.divider()
-
-# ---------------- ABOUT ----------------
-st.subheader("📌 About Project")
-
-st.write("""
-This project uses a Convolutional Neural Network (CNN) trained on Cat and Dog image datasets.
-
-- Deep Learning Model: CNN
-- Framework: TensorFlow & Keras
-- Frontend: Streamlit
-- Image Size: 200 × 200
-- Binary Classification: Cat vs Dog
-""")
-
-# ---------------- FOOTER ----------------
-st.markdown(
-    """
-    <div class="footer">
-    <h4>Developed by Bhupinder Sandhu</h4>
-    B.Tech AI & Data Science Project
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("---")
+st.write("Developed by Bhupinder Sandhu")
